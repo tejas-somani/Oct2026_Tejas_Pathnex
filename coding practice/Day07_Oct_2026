@@ -1,0 +1,67 @@
+#set up Nginx with custom config
+- name: Setup Nginx with custom config
+  hosts: all
+  becomes: yes
+  tasks: 
+    - name: Install Nginx
+      yum: 
+       name: nginx
+       state: present 
+    - name: copy custom nginx.conf
+      copy: 
+        src: nginx.copy
+        dest: /etc/nginx/nginx.conf
+    - name: Start nginx service
+      service: 
+       name: nginx
+       state: started
+       enabled: yes
+
+# ** Terraform provision EC2 with IAM role**
+resource "aws_iam_role" "ec2_role" {
+  name                 = "pathnex_ec2_role"
+  assume_role_policy   = jsonecode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+     ]
+   })
+ }
+
+resource "aws_instance" "pathnex_ec2" {
+ ami             = "ami-0abcd1234abcd1234"
+ instance_type   = "t2.medium"
+ iam_instance_profile = aws_iam_role.ec2_role.name
+ tags = {
+  Name = "Pathnex-EC2"
+ }
+}
+
+
+## ****Kubernets ConfigMap and Secret Management***
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pathnex-config
+data:
+  app.properties: |
+  key=value
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pathnex-secret
+type: Opaque
+data:
+  password: abcerfdsstyytM0=
+
+
+
